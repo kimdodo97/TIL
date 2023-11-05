@@ -1,4 +1,4 @@
-# 📕TIL (Todat I Learn)
+# 📕TIL (Todai I Learned)
 
 ### 🔥 목표가 아닌 시스템을 만들자
 
