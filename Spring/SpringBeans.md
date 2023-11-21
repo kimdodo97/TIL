@@ -1,5 +1,3 @@
-# Spring Bean & DI
-
 김영한님의 강의 들으면 앞서 서비스 테스트를 작성하는 방법을 배웠다
 이후 강의에 핵심 내용의 스프링빈과 의존관계에 대해서 배웠다
 
@@ -66,6 +64,13 @@ public class MemberService {
 @Controller / @Service @Repository
 
 즉 멤버 서비스 객체에 @Service를 사용해서 컴포넌트 어노테이션을 스프링빈에 자동 등록된다.
+
+
+그럼 여기서 질문
+>같은 단계 하위가 아닌 패키지를 생성하고 컴포넌트를 통해서 스프링 빈 등록이 가능하냐?
+>
+>답은 불가능하다❌. 기본적으로 시작하는 @SpringBootApplication 의 하위 패키지를 쭉 스캔하며 등록하기 떄문이다.
+
 아래는 예제 코드
 
 ```java
@@ -88,32 +93,59 @@ public class MemberService {
 
 > 여기서 스프링은 스프링 컨테이너에 스프링 빈 등록시 싱글톤 디자인으로 객체 등록
 
-자바 코드를 통해서 스프링 빈을 등록하기도 한다.
+자바 코드를 통해서 스프링 빈 등록하는 코드는 다음과 같다
+먼저 SpringConfig 패키지를 생성하고 필요한 의존성인 멤버 서비스 그리고 멤버 서비스가 필요한 멤버 리포지토리를 각각 빈에 등록한다.
+
 ```java
 package hello.hellospring;
+
 import hello.hellospring.repository.MemberRepository;
 import hello.hellospring.repository.MemoryMemberRepository;
-import hello.hellospring.service.MemberService;
+import hello.hellospring.services.MemberService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 @Configuration
 public class SpringConfig {
-   @Bean
-   public MemberService memberService() {
-   		return new MemberService(memberRepository());
-   }
-   @Bean
-   public MemberRepository memberRepository() {
-  		return new MemoryMemberRepository();
-   }
-}
-```
-영한님의 강의는 메모리 리포지토리 형식을 사용하는 중 추후 다른 리포지토리로 변경할 예정이라 현재는 컴포넌트 스캔 방식 대신 자바 코들르 사용
+    @Bean
+    public MemberService memberService(){
+        return new MemberService(memberRepository());
+    }
 
+    @Bean
+    public MemberRepository memberRepository(){
+        return new MemoryMemberRepository();
+    }
+
+
+}
+
+```
 여기서 주의 사항 있다.
 
+우리는 지금 멤버 서비스가 생성자를 통해서 멤버 컨트롤러에 주입되고
+멤버 리포지토리가 생성자로 멤버 서비스게 주입된다
+
+```java
+#멤버 서비스 생성자
+ public MemberService(MemberRepository memberRepository){
+        this.memberRepository = memberRepository;
+    }
+```
 > DI는 필드 주입,setter주입, 생성자 주입 크게 3가지 방식이 있다.
 의존관계가 실행 중에 동적으로 변화하는 경우는 크게 없어 생성자 주입 권장
 
+필드 주입은 추후에 변경이 어렵기 때문에 권장 ❌
+생성자 주입은 일반적인 경우
+setter 주입은 setter를 통해서 주입되지만 실질적으로 한번 생정된 인스턴스가 바뀌는 일이 거의 없음으로 public 하게 함수를 열어두는게 좋지 않음
+
+처음 로딩되고 조립되는 시점에 의존성 주입을 완료하는 생성자 주입 선호
 >실무에서는 정형화된 컨트롤러, 서비스, 리포지토리 같은 코든느 컴포넌트 스캔 사용
 상황에 따라 클래스 변경이 필요하면 스프링 빈 등록
+
+여기서 중요한건 상황에 따라 구현 클래스를 변경해야한다라는 상황이 중요한 요소
+정형화된 상황이라면 괜찮지만 해당 강의에서는 데이터 저장소가 선정되지 않아 메모리 리포지토리를 사용
+
+실제로 메모리리포지토리로 구현된 상황에서 DB나 저장소가 선정된 이후 기존의 운영 코드를 수정하지 않고 바꿔치기 하는 방법을 위해서 스프링 빈 등록을 사용한다.
+
+💥직접 스프링 빈 등록을 하면 DB를 바꿨을 때 리포지토리 빈 등록의 반환되는 부분만 변경하면 된다
