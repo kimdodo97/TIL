@@ -72,7 +72,9 @@ public class MemberController {
 }
 ```
 코드에서 회원가입을 누르면 아래 그림처럼 생긴 웹 페이지가 나온다
+
 ![](https://velog.velcdn.com/images/kimdodo/post/a27e8cdc-aca2-408f-9fad-70ac9cac9bd3/image.png)
+
 여기서 이름을 입력하고 등록을 클릭하면 회원이 등록되는 아주 간단한 구조이다.
 
 그럼 해당 웹 페이지가 어떻게 보여지고 회원 등록이 되는지 일련의 과정을 알아보자
