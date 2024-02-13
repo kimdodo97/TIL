@@ -106,15 +106,37 @@ public class OrderServiceImpl implements OrderService{
 
 Init() 메서드를 만들어서 사용하기도 함, @Autowired를 하는 것은 동일하다. 그렇지만 해당 메서드 주입은 굳이 사용하지 않음. Setter 나 생성자 주입을 통해서 충분히 커버가 가능하며 쓸 필요가 없는 것
 
-## 옵션 처리
-스프링 빈이 없어도 동작해야하는 상황이 있다
-이런 경우에는 required = false로 설정하면 가능하다.
-자동 주입할 대상이 없으면 수정자 메서드 자체가 호출이 안된다.
-여기서 수정자 라고 하는것은 의존관계를 주입하는 메서드를 의미한다
+#### **✅ 옵션 처리**
 
-@Nullable을 호출하면 호출은 되는데 null을 반환한다.
-Optional을 사용하는 방법은 없으면  Optional.empty를 반환
-```java
+@Autowired에서 해당 의존관계가 없는 경우에도 애플리케이션을 실행되야 하는 상황도 존재한다.
+
+이럴때는 옵션 처리를 통해서 해결한다.
+
+1\. required = false
+
+2\. @Nullable
+
+3\. Optional
+
+3가지 방법이 존재한다.
+
+**◾ required \= false**
+
+해당 설정을 @Autowired에 추가하면 의존관계 구현체가 없어도 그냥 애플리케이션은 실행된다.
+
+하지만 의존관계가 없기 때문에 그 @Autowired의 코드는 실행 안됨 (테스트 코드 참조)
+
+**◾ @Nullable**
+
+Nullable을 통해서 사용하면 호출은 되는데 null을 반환한다.
+
+개인적인 생각으로 Nullable은 별로라고 생각한다. null 반환 자체를 지양하는것이 좋으면 NPE 이 생기기 딱 좋은 상태
+
+**◾ Optional**
+
+Nullable과 흡사한데 Optional.empty를 반환하는 방식이다.
+
+```
 public class autowiredTest {
     @Test
     void AutowiredOption(){
@@ -139,18 +161,19 @@ public class autowiredTest {
         }
     }
 }
-
 ```
 
-## 생성자 주입을 선택하자
-이전에는 메서드 주입 이나 수정자 주입을 많이 썼음 
-하지만 최근에 DI를 지원하는 프레임워크는 대부분 생성자 주입을 수행
-대부분의 의존 관계는 어플리케이션 종료 직전까지 대부분 변경 되면 안되는 상황이 대부분
+## **2\. 생정자 주입 선택**
 
-프레임워크 없이 순수한 자바 코드 단위 테스트를 하는 경우에 좋은 경우
-다음과 같이 수정자 의존관계인 경우
+설명한 것 처럼 총 4가지 방법의 의존 주입 방법이 존재한다. 하지만 **생성자 주입**을 사용하는 것을 **권장**한다.
 
-```java
+특히 수정자 주입은 이전에는 많이 사용한 의존 주입 방법이다. 하지만 최근에는 DI 지원 프레임워크는 생성자 주입을 권장
+
+왜 생성자 주입이 좋은지는 테스트 과정에서 처음 드러난다.
+
+만약 수정자 DI를 하는 코드일 때 생각해보자
+
+```
 @Autowired
 public void setMemberRepository(MemberRepository memberRepository){
 	this.memberRepository = memberRepository;
@@ -161,85 +184,125 @@ public void setDiscountPolicy(DiscountPolicy discountPolicy){
 	this.discountPolicy = discountPolicy;
 }
 ```
-만약 테스트 코드를 만든다고 생각해보자
-수정자를 이용해서 DI를 하기 때문에 생성자를 통해 인스턴스를 생성한 상태에서는 현재 의존 주입이 이루어지지 않은 상태이다.
-테스트 코드를 작성하는 경우 개발자는 직관적으로 어떤 상태가 주입되어야 하는지 알 수 가 없다.
-또한 생성자는 생성되어 테스트 실행은 되지만 실제로 DI가 이루어지지 않았기에 null point exception이 발생
 
-하지만 생성자 주입을 사용하면 인스턴스를 생성하는 과정에서 new에서 자체적으로 컴파일 에러가 발생하기 때문에 바로 무엇이 필요한지 알 수 있다.
+테스트는 순수자바 코드를 통해서 수행한다.
 
-final 을 사용해서 생성자에서 실수로 값이 설정되지 않은 경우에도 컴파일 과정에서 에러가 발생하여 초기에 에러를 통해서 수정이 가능하다.
+> 영한님이 항상 언급하는 부분중 하나가 순수 자바를 통한 유닛테스트가 많은 그리고 이게 잘 수행되는 코드가 좋은 경우가 많다
 
-생정자 주입 방식을 통해서 여러 문제를 컴파일 에러를 통해서 인지가 가능하며 final 키워드를 사용하는 것은 오직 생성자에서만 가능한 방법이다.
-또한 초기에 설정한 것 메모리리포지토리, 멤버 서비스, 할인 정책 등은 애플리케이션 실행에서 설정되는 것이며 이것이 변경되는 것은 애플리케이션이 종료되거나 업데이트 과정에서 이루어져야하는 것이다.
+인스턴스를 생성한 상태에서는 현재 **DI가 이루어지지 않는 상태**이다. 즉 객체 생성 상태에서는 MemberRepository, DiscountPolicy가 어떤 구현체를 쓰는지 모른다는 것
 
-## 룸복과 최신 트렌드
-생성자를 통해서 사용하는 것은 좋지만 인자값을 각 지정하는 과정이 필요하다
-이를 조금 더 간결하게 표현할 수 있는 방법이 바로 롬복이다.
-롬복 라이브러리를 gradle에 추가하고 새로 빌드 한 이후 annotation processor enable 상태로 변경하고 pulgin을 추가하면 된다.
+테스트 코드를 작성하는 A 개발자는 이 코드의 어떤 구현 객체를 쓰는지 모른다. 또한 어떤 구현객체의 인터페이스를 사용하는지 모른다. 즉 **DI하는 빈의 타입을 전혀 모른다는 것**이다.
 
-롬복을 쓰는 이유는 @Setter, @Getter 등 어노테이션을 사용해서 set???, get???와 같은 메서드를 직접 구현하는 과정을 줄여준다.
+이런 경우 직접 코드 단으로 넘어가서 다시 확인해야 하며 단순하게 인스턴스만 생성해서 쓰면 Null Point Exception이 발생
 
-setter,getter 이외에도 생성자를 만드는 과정도 어노테이션으로 수행이 가능하다.
-@RuiredArgsConstructor를 통하면 final 키워드가 붙은 멤버 변수를 생성자를 통해서 생성이 가능하다.
+이제 생성자를 통한 DI를 수행한다고 생각해보자
 
-```java
-private final MemberRepository memberRepository;
-private final DiscountPolicy discountPolicy;
+인스턴스를 생성하는 과정에서 new를 통한 선언에서 이미 자체적으로 컴파일 에러가 발생한다.
 
-@Autowired
-public OrderServiceImpl(MemberRepository memberRepository, DiscountPolicy discountPolicy) {
-  this.memberRepository = memberRepository;
-  this.discountPolicy = discountPolicy;
+**final을 사용**해서 생성자에서 실수로 값을 설정하지 않고 구현된 경우에도 컴파일 에러를 통해서 **초기에 에러가 발견**된다.
+
+즉 생성자를 통해서 기존에 테스트 코드를 작성할때 문제, 구현체가 없는 채로 생성된 인스턴스로 인한 애플리케이션 실행 후 에러 등 문제를 해결 가능
+
+> 대부분의 DI 주입을 통해서 불변하는 성질을 가진 메인 DB 커넥션, 서비스 로직 등은 애플리케이션 시작과 종료까지 변경되면 안되는 상황이다. 그렇기 때문에 생성자 주입을 권장|  
+
+## **3\. LomBok**
+
+생성자를 통해서 의존 주입을 하는 것도 좋다. 그리고 자바에서는 getter, setter를 쓰는 것이 일반적인데 이때 마다 구현 코드를 일일히 쓰는 것은 굉장히 비효율적
+
+이걸 LomBok라이브러리를 통해서 해결 할 수 있다.
+
+롬복의 여러 어노테이션을 통해서 이런 반복적인 작업을 줄일 수 있다.
+
+대표적으로 @Getter, @Setter가 존재한다.
+
+```
+@Getter@Setter
+@ToString
+public class HelloLombok {
+    private String name;
+    private int age;
+
+    public static void main(String[] args) {
+        HelloLombok helloLombok = new HelloLombok();
+        helloLombok.setName("asdf");
+        helloLombok.setAge(1);
+        String name = helloLombok.getName();
+        System.out.println(name);
+        System.out.println(helloLombok.toString());
+    }
 }
 ```
-이 생성자 코드가 어노테이션 하나로 대체되는 것이다.
-그럼 여기서 의존 주입은 어디서 하는지 의문일 수 도 있는데 @Autowired를 생성자가 1개이면 생성가능하다.
-즉 이 특징을 살려서 코드를 간결하게 만들고 DI하는 변수가 추가되거나 생성자가 추가될 떄 final 키워드를 통한 선언만 하면 된다.
 
-코드 상에서는 사라진 것으로 보이지만 디컴파일을 확인하면 실제 소스는 기존과 아주 동일하게 있는 상태이다.
+이런식으로 어노테이션을 사용하면
 
------------------------------------
-### 빈 여러개 일때 해결법
-같은 역할을 수행하는 두개의 구현체가 있다고 생각해보자
-할인 정책에서 고정할인, 등급 할인 정책 두가지가 있을떄 두가지 모두 컴포넌트로 등록하면 DI 과정에서 동일한 역할 즉 동일한 DiscountPolicy라는 인터페이스를 가진 두개의 컴포넌트가 생기고 이는 빈 충돌이 일어나서 에러가 발생한다.
+getter, setter , toString을 구현하지 않아도 롬복에서 이 구현을 대신 해준다.
 
-그럼 2개 이상의 조회 대상 빈이 있을때 어떻게 하는지 한번 알아보자
+👉실행 결과
 
-@Autowired 필드 명 매칭
-@Qualifier 끼리 -> 빈 이름매칭
-@Primary 사용
+[##_Image|kage@b40xzU/btsEHHVuNQy/x6p274u9na6MJTPEXJvu81/img.png|CDM|1.3|{"originWidth":250,"originHeight":70,"style":"alignCenter"}_##]
 
-#### @Autowired 필드 명 매칭
-기본적으로 타입 매칭을 수행한다. 이때 빈이 여러개있으면 필드 이름, 파라미터이름으로 빈 이름을 추가 매칭한다.
-타입이 똑같으면 필드나 파라미터 이름이 동일한게 있는지 추가로 확인해서 빈 조회
+생성자를 생성하는 경우에는 @RequiredArgsConstructor를 사용하면 **final 키워드**를 사용한 멤버 변수를 인자값으로 받는 **생성자를 자동**으로 만들어 준다. (사용자 소스에서는 보이지 않지만 디컴파일에서 확인이 가능하다.)
 
-#### @Qualifier
-추가 구분자를 통해서 주입하는 방법
-rateDiscountPolicy라는 할인 정책에 @Qualifier("mainDiscountPolicy")
-fixedDiscountPolicy라는 할인 정책에 @Qualifier("fixedDiscountPolicy") 라고 각각 어노테이션을 추가한다.
+그럼 **의존주입**은 어떻게 하는걸까
 
-```java
-@Autowired
-    public OrderServiceImpl(MemberRepository memberRepository, @Qualifier("mainDiscountPolicy") DiscountPolicy discountPolicy) {
-        this.memberRepository = memberRepository;
-        this.discountPolicy = discountPolicy;
-    }
+@Autowired는 **생성자가 하나이면 자동으로 @Autowired**를 붙여주는 것이 디폴트이기 때문에 생성자가 하나인 경우에서는 이를 활용하면 코드가 획기적으로 줄어든다.
+
+## **4\. Bean 중복 해결**
+
+같은 역할을 수행하는 빈 구현체가 여러개일때 이게 모두 Component가 등록되어 있으면 어떻게 해야 할까
+
+기본적으로 실행을 하면 구현체가 여러개라고 충돌이 발생하며 컴파일에러가 발생한다.
+
+예시를 통해서 한번 알아보자
+
+고객 할인 정책이 고정 할인, 등급 할인 정책이 2가지가 있을때 두가지가 모두 컴포넌트로 등록되어 있다.
+
+3가지의 방법으로 해결이 가능하다.
+
+-   @Autowired 필드 명 매칭
+-   @Qualifier 사용
+-   @Pirmary 사용
+
+#### **◼ @Autowired 필드 명 매칭**
+
+기본적으로 Autowired는 **타입 매칭을 수행**한다. 이때 여러개 동일 빈 타입이 있으면 **필드 이름, 파라미터 이름**으로 빈 이름을 추가 매칭한다.
+
+즉 DiscountPolicy rateDiscountPolicy로 생성자 DI 주입을 할때 파라미터로 전달하면 DI할때 스프링빈에서 타입을 보고 rateDiscountPolicy가 있는지 확인하고 DI를 수행하는 것
+
+> 개인적으로는 이렇게 이름을 수행하면 구현체에 의존하지는 않지만 이름으로 의존하는 경향으로 보여 DIP 위배 처럼 생각된다.
+
+#### **◼ @Qualifier** 
+
+Qualifier는 **추가 구분자**를 통해서 주입하는 방법이다.
+
+각각 고정, 등급 할인 정책에서 @Qualifier 어노테이션에 이름을 등록하고 아래 예시 코드 처럼 파라미터에도 Qualifier 를 사용하면 그 이름의 빈을 추가로 검색해서 찾아서 DI를 수행
+
 ```
-주문 서비스 생성자에서 @Qualifier를 사용하면 해당 설정된 이름으로된 스프링빈을 추가로 찾는 것이다.
->Qualifier는 Qualifier를 찾는 용도로만 쓰자
-Bean 직접 등록과정에서도 사용가능
+@Autowired
+public OrderServiceImpl(MemberRepository memberRepository, @Qualifier("mainDiscountPolicy") DiscountPolicy discountPolicy) {
+    this.memberRepository = memberRepository;
+    this.discountPolicy = discountPolicy;
+}
+```
 
-#### @Primary
-이는 우선순위를 지정해서 사용하는 방법이다.
-@Primary 어노테이션이 있는 빈이 우선적으로 등록되는 것이다.
-컴포넌트 어노테이션에 추가로 하나더 등록하면 된다.
+#### **◼ @Pirmary**
 
-### 장단점
-@Qualifier 모든 생성자 코드에서 Qualifier를 써줘야한다. 하지만 @Primary는 비교적 편하다는 장점이 있다.
+우선순위를 지정해서 사용하는 방법이다.
 
-예를 들어서 자주쓰는 DB의 커넥션을 획득하는 빈, 서브 데이터베이스의 빈이 있을때 메인의 DB는 Primary로 하고 서브는 Qualifier를 지정해서 명시적으로 획득하는 것이 현업에서 많이 쓰는 방식이자 코드가 깔금해진다.
->Qualifier와 Primary가 둘다 있을때 Qualifier가 더 우선순위가 높다.
-Spring은 자동으로 하는 것 보다 수동으로 뭔가 설정을 더 해야되는 상황에 항상 우선순위가 높은 편이다.
+@Pirmary 어노테이션이 있는 빈이 우선적으로 등록된다.
 
+컴포넌트 어노테이션에 추가로 하나를 더 등록하면 된다.
 
+#### **✅ 장단점**
+
+@Qualifier은 모든 생성자 코드에서 @Qualifier를 써줘야한다. 이는 어떻게 보면 추가적인 작업
+
+또한 롬복을 쓰기 힘들어 생성자 주입 코드를 따로 만들어야함
+
+@Primary는 비교적 간단하게 사용이 가능하다.
+
+일반적으로는 primary를 메인 컴포넌트에 사용하고 Qualifier는 필요한 경우 서브 컴포넌트에서 필요한 경우에만 명시적으로 사용하는 방식을 주로 사용한다.
+
+> Qualifier와 Primary가 둘다 있을때 Qualifier가 더 우선순위가 높다. Spring은 자동으로 하는 것 보다 수동으로 뭔가 설정을 더 해야되는 상황에 항상 우선순위가 높은 편이다.
+
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
