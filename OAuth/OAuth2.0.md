@@ -50,3 +50,13 @@ Mine ▶ Client
 
 이렇게 3단계의 과정만 진행하면 쉽게 OAuth를 위한 3가지의 정보를 취득 가능하다.  
 이 과정이 바로 Resource Server에 Client 를 Register 한 것이다.
+
+### Resource Owner 승인 과정
+
+앞선 과정들로 Resource Server는 3가지 정보를  
+그리고 Client 는 Client ID, Secret 그리고 Redirect URI에 대한 컨트롤러 처리를 구현했을 것이다.
+
+이때 만약 Resource 서버가 가지는 A,B,C,D 기능 중 B,C 정보만 취득하고 싶다면 어떻게 될까❔
+
+> 어렵게 생각할 수 있지만 B,C 정보라는 건 위 예시의 사용 API 중 어떤 것만 필수로 쓸 것인가 이다
+> ![alt text](image-4.png)
